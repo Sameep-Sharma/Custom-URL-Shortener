@@ -2,10 +2,11 @@ const express = require("express");
 const { connectToMongoDb} = require('./connections')
 const app = express();
 const PORT = 8001;
-const urlRoute = require('./routes/url')
+const cookieParser = require('cookie-parser')
 const URL = require('./models/url')
 const path = require('path')
-const staticRoute = require("./routes/staticRouter")
+
+const {restrictToLoggedin,checkAuth} = require('./middleware/auth')
 
 connectToMongoDb('mongodb://127.0.0.1:27017/short-url')
 .then(()=>{
@@ -26,12 +27,24 @@ app.get('/test',async (req,res) => {
   })
 })
 
+const urlRoute = require('./routes/url')
+const staticRoute = require("./routes/staticRouter")
+const userRoute = require('./routes/user')
+
 app.use(express.urlencoded({extended:false}));//taaki form data bhi accept kare
+app.use(cookieParser())
 
 
-app.use('/url',urlRoute);
 
-app.use("/",staticRoute)
+app.use('/url',restrictToLoggedin,urlRoute);
+
+app.use("/user",userRoute);
+
+app.use("/",checkAuth,staticRoute)
+
+
+
+
 
 app.get('/url/:shortId',async (req,res) => {
   const shortId = req.params.shortId;
